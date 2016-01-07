@@ -110,7 +110,7 @@ enum {
 		
 	//Specify the Sampler unit, to be used as the first node of the graph
 	cd.componentType = kAudioUnitType_MusicDevice;
-	cd.componentSubType = kAudioUnitSubType_Sampler;
+    cd.componentSubType = kAudioUnitSubType_MIDISynth; // AB:
 	
     // Add the Sampler unit node to the graph
 	result = AUGraphAddNode (self.processingGraph, &cd, &samplerNode);
@@ -283,6 +283,7 @@ enum {
                         );
 
     // Set the class info property for the Sampler unit using the property list as the value.
+    if (NO) {
 	if (presetPropertyList != 0) {
 		
 		result = AudioUnitSetProperty(
@@ -296,6 +297,22 @@ enum {
 
 		CFRelease(presetPropertyList);
 	}
+    }
+    
+    // AB:
+    if (YES) {
+        NSString* samplerInstrumentPath = nil;
+        samplerInstrumentPath = [[NSBundle mainBundle] pathForResource:@"gs_instruments" ofType:@"dls"];
+        NSURL* aUrl = [NSURL fileURLWithPath:samplerInstrumentPath];
+        
+        CFURLRef url = CFBridgingRetain(aUrl);
+        AudioUnitSetProperty(self.samplerUnit,
+                             kMusicDeviceProperty_SoundBankURL,
+                             kAudioUnitScope_Global,
+                             0,
+                             &url,
+                             sizeof(url));
+    }
 
     if (errorRef) CFRelease(errorRef);
 	CFRelease (propertyResourceData);
@@ -367,7 +384,11 @@ logTheError:
 
 // Play the mid note
 - (IBAction) startPlayMidNote:(id)sender {
-
+    // AB:
+    UInt32 command = 0xC0 | 0;
+    UInt32 instrument = arc4random_uniform(100);
+    MusicDeviceMIDIEvent(self.samplerUnit, command, instrument, 0, 0);
+    
 	UInt32 noteNum = kMidNote;
 	UInt32 onVelocity = 127;
 	UInt32 noteCommand = 	kMIDIMessage_NoteOn << 4 | 0;
